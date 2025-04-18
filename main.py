@@ -455,7 +455,7 @@ class WifePlugin(Star):
 
 # 每人每天可牛老婆次数
 _ntr_max = 3
-ntr_lmt = {user_id: {'date': 'YYYY-MM-DD', 'count': int}}
+ntr_lmt = {}  # 格式：{user_id: {'date': 'YYYY-MM-DD', 'count': int}}
 ntr_max_notice = f'每日最多{_ntr_max}次，明天再来~'
 ntr_possibility = 0.20
 ntr_statuses = {}
