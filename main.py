@@ -273,19 +273,19 @@ class WifePlugin(Star):
             yield event.plain_result('对方老婆已过期')
             return
 
-    # 增加牛次数
-    ntr_lmt[user_id]['count'] += 1
+        # 增加牛次数
+        ntr_lmt[user_id]['count'] += 1
 
-    if random.random() < ntr_possibility:
-        target_wife = config[target_id][0]
-        del config[target_id]
-        config.pop(user_id, None)
-        write_group_config(group_id, user_id, target_wife, today, nickname, config)
-        yield event.plain_result(f'{nickname}，牛老婆成功！')
-    else:
-        remaining = _ntr_max - ntr_lmt[user_id]['count']
-        yield event.plain_result(
-            f'{nickname}，失败！剩余次数{remaining}')
+        if random.random() < ntr_possibility:
+            target_wife = config[target_id][0]
+            del config[target_id]
+            config.pop(user_id, None)
+            write_group_config(group_id, user_id, target_wife, today, nickname, config)
+            yield event.plain_result(f'{nickname}，牛老婆成功！')
+        else:
+            remaining = _ntr_max - ntr_lmt[user_id]['count']
+            yield event.plain_result(
+                f'{nickname}，失败！剩余次数{remaining}')
 
     async def search_wife(self, event: AstrMessageEvent):
         group_id = event.message_obj.group_id
