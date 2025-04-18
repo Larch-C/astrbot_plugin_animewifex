@@ -216,13 +216,6 @@ class WifePlugin(Star):
 
         write_group_config(group_id, user_id, wife_name, get_today(), nickname, config)
 
-    # 每人每天可牛老婆次数
-    _ntr_max = 3
-    ntr_lmt = {}  # 结构改为 {user_id: {'date': 'YYYY-MM-DD', 'count': int}}
-    ntr_max_notice = f'每日最多{_ntr_max}次，明天再来~'
-    ntr_possibility = 0.20
-    ntr_statuses = {}
-
     async def ntr_wife(self, event: AstrMessageEvent):
         group_id = event.message_obj.group_id
         if not group_id:
@@ -240,13 +233,9 @@ class WifePlugin(Star):
             yield event.plain_result('无法获取用户 ID。')
             return
 
-        today = get_today()  # 获取当前日期
-        # 初始化或重置次数
-        if user_id not in ntr_lmt or ntr_lmt[user_id].get('date') != today:
-            ntr_lmt[user_id] = {'date': today, 'count': 0}
-
-        current_count = ntr_lmt[user_id]['count']
-        if current_count >= _ntr_max:
+        if user_id not in ntr_lmt:
+            ntr_lmt[user_id] = 0
+        if ntr_lmt[user_id] >= _ntr_max:
             yield event.plain_result(f'{nickname}，{ntr_max_notice}')
             return
 
@@ -273,9 +262,7 @@ class WifePlugin(Star):
             yield event.plain_result('对方老婆已过期')
             return
 
-        # 增加牛次数
-        ntr_lmt[user_id]['count'] += 1
-
+        ntr_lmt[user_id] += 1
         if random.random() < ntr_possibility:
             target_wife = config[target_id][0]
             del config[target_id]
@@ -283,9 +270,8 @@ class WifePlugin(Star):
             write_group_config(group_id, user_id, target_wife, today, nickname, config)
             yield event.plain_result(f'{nickname}，牛老婆成功！')
         else:
-            remaining = _ntr_max - ntr_lmt[user_id]['count']
             yield event.plain_result(
-                f'{nickname}，失败！剩余次数{remaining}')
+                f'{nickname}，失败！剩余次数{_ntr_max - ntr_lmt[user_id]}')
 
     async def search_wife(self, event: AstrMessageEvent):
         group_id = event.message_obj.group_id
@@ -464,6 +450,13 @@ class WifePlugin(Star):
         except Exception as e:
             self.context.logger.error(f'发送消息失败: {e}')
             yield event.plain_result(f'已重置用户{target_id}的牛老婆次数。')
+
+# 每人每天可牛老婆次数
+_ntr_max = 3
+ntr_lmt = {}
+ntr_max_notice = f'每日最多{_ntr_max}次，明天再来~'
+ntr_possibility = 0.20
+ntr_statuses = {}
 
 # 加载 JSON 数据
 def load_group_config(group_id: str):
