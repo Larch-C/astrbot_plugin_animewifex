@@ -6,7 +6,6 @@ import re
 import json
 import requests
 
-
 # 设置插件主目录
 PLUGIN_DIR = os.path.join('data', 'plugins', 'astrbot_plugin_AnimeWife')
 os.makedirs(PLUGIN_DIR, exist_ok=True)
@@ -19,74 +18,104 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 IMG_DIR = os.path.join(PLUGIN_DIR, 'img', 'wife')
 os.makedirs(IMG_DIR, exist_ok=True)
 
-# NTR 状态文件路径
+# NTR 功能状态文件
 NTR_STATUS_FILE = os.path.join(CONFIG_DIR, 'ntr_status.json')
-
-# 换老婆记录文件路径
-MAX_CHANGES_PER_DAY = 3  # 每天最多换3次
+# NTR 次数记录文件
+NTR_RECORDS_FILE = os.path.join(CONFIG_DIR, 'ntr_records.json')
+# 换老婆记录文件
 CHANGE_RECORDS_FILE = os.path.join(CONFIG_DIR, 'change_records.json')
 
-# 图片的基础 URL
+# 每人每天可牛老婆次数
+_NTR_MAX = 3
+# 每天换老婆最大次数
+_MAX_CHANGES_PER_DAY = 3
+# NTR 成功概率
+ntr_possibility = 0.20
+# 提示文本
+NTR_NOTICE = f'每日最多{_NTR_MAX}次，明天再来~'
 IMAGE_BASE_URL = 'http://127.0.0.1:7788/?/img/'
 
-
-# 新增函数：获取上海时区当日日期
+# -------- 工具函数 --------
 def get_today():
+    """获取当前上海时区日期字符串"""
     utc_now = datetime.utcnow()
-    shanghai_time = utc_now + timedelta(hours=8)
-    return shanghai_time.date().isoformat()
+    return (utc_now + timedelta(hours=8)).date().isoformat()
 
 
-# 载入 NTR 状态
+def load_json(path):
+    """安全加载 JSON 文件"""
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return {}
+
+
+def save_json(path, data):
+    """保存数据到 JSON 文件"""
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+# NTR 状态管理
+ntr_statuses = {}
 def load_ntr_statuses():
     global ntr_statuses
-    if not os.path.exists(NTR_STATUS_FILE):
-        with open(NTR_STATUS_FILE, 'w', encoding='utf-8') as f:
-            json.dump({}, f, ensure_ascii=False, indent=4)
-        ntr_statuses = {}
-    else:
-        with open(NTR_STATUS_FILE, 'r', encoding='utf-8') as f:
-            ntr_statuses = json.load(f)
-
-
-# 载入换老婆记录
-def load_change_records():
-    global change_records
-    if os.path.exists(CHANGE_RECORDS_FILE):
-        with open(CHANGE_RECORDS_FILE, 'r', encoding='utf-8') as f:
-            old_records = json.load(f)
-            # 数据格式转换
-            change_records = {}
-            for group_id, users in old_records.items():
-                change_records[group_id] = {}
-                for user_id, record in users.items():
-                    if isinstance(record, str):  # 旧格式（仅日期）
-                        change_records[group_id][user_id] = {
-                            'date': record,
-                            'count': 1
-                        }
-                    else:  # 新格式（带次数）
-                        change_records[group_id][user_id] = record
-    else:
-        change_records = {}
-
-
-# 初始化加载数据
-load_ntr_statuses()
-load_change_records()
-
+    ntr_statuses = load_json(NTR_STATUS_FILE)
 
 def save_ntr_statuses():
-    with open(NTR_STATUS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(ntr_statuses, f, ensure_ascii=False, indent=4)
+    save_json(NTR_STATUS_FILE, ntr_statuses)
 
+# NTR 次数管理
+ntr_records = {}
+def load_ntr_records():
+    global ntr_records
+    ntr_records = load_json(NTR_RECORDS_FILE)
+
+def save_ntr_records():
+    save_json(NTR_RECORDS_FILE, ntr_records)
+
+# 换老婆记录管理
+change_records = {}
+def load_change_records():
+    global change_records
+    raw = load_json(CHANGE_RECORDS_FILE)
+    # 兼容旧格式
+    change_records.clear()
+    for gid, users in raw.items():
+        change_records[gid] = {}
+        for uid, rec in users.items():
+            if isinstance(rec, str):
+                change_records[gid][uid] = {'date': rec, 'count': 1}
+            else:
+                change_records[gid][uid] = rec
 
 def save_change_records():
-    with open(CHANGE_RECORDS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(change_records, f, ensure_ascii=False, indent=4)
+    save_json(CHANGE_RECORDS_FILE, change_records)
+
+# 群配置存取
+def load_group_config(group_id: str):
+    path = os.path.join(CONFIG_DIR, f'{group_id}.json')
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
-@register("wife_plugin", "monbed", "群二次元老婆插件", "1.1.0", "https://github.com/monbed/astrbot_plugin_AnimeWifeX")
+def write_group_config(group_id: str, user_id: str, wife_name: str, date: str, nickname: str, config: dict):
+    config[user_id] = [wife_name, date, nickname]
+    path = os.path.join(CONFIG_DIR, f'{group_id}.json')
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=4)
+
+# 初始化数据
+load_ntr_statuses()
+load_ntr_records()
+load_change_records()
+
+@register("wife_plugin", "monbed", "群二次元老婆插件", "1.2.0", "https://github.com/monbed/astrbot_plugin_AnimeWifeX")
 class WifePlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -95,18 +124,18 @@ class WifePlugin(Star):
             "牛老婆": self.ntr_wife,
             "查老婆": self.search_wife,
             "切换ntr开关状态": self.switch_ntr,
-            "换老婆": self.change_wife, # 新增换老婆命令
-            "重置牛": self.reset_ntr  # 新增重置牛老婆命令
+            "换老婆": self.change_wife,
+            "重置牛": self.reset_ntr
         }
         self.admins = self.load_admins()
 
     def load_admins(self):
+        path = os.path.join('data', 'cmd_config.json')
         try:
-            with open(os.path.join('data', 'cmd_config.json'), 'r', encoding='utf-8-sig') as f:
-                config = json.load(f)
-                return config.get('admins_id', [])
-        except Exception as e:
-            self.context.logger.error(f"加载管理员列表失败: {str(e)}")
+            with open(path, 'r', encoding='utf-8-sig') as f:
+                cfg = json.load(f)
+                return cfg.get('admins_id', [])
+        except:
             return []
 
     def parse_at_target(self, event):
@@ -116,362 +145,153 @@ class WifePlugin(Star):
         return None
 
     def parse_target(self, event):
-        target_id = self.parse_at_target(event)
-        if target_id:
-            return target_id
+        target = self.parse_at_target(event)
+        if target:
+            return target
         msg = event.message_str.strip()
         if msg.startswith("牛老婆") or msg.startswith("查老婆"):
-            target_name = msg[len(msg.split()[0]):].strip()
-            if target_name:
+            name = msg.split(maxsplit=1)[-1]
+            if name:
                 group_id = str(event.message_obj.group_id)
-                config = load_group_config(group_id)
-                if config:
-                    for user_id, user_data in config.items():
-                        try:
-                            nick_name = event.get_sender_name()
-                            if re.search(re.escape(target_name), nick_name, re.IGNORECASE):
-                                return user_id
-                        except Exception as e:
-                            self.context.logger.error(f'获取群成员信息出错: {e}')
+                cfg = load_group_config(group_id)
+                for uid, data in cfg.items():
+                    nick = event.get_sender_name(uid)
+                    if nick and re.search(re.escape(name), nick, re.IGNORECASE):
+                        return uid
         return None
 
     @event_message_type(EventMessageType.ALL)
     async def on_all_messages(self, event: AstrMessageEvent):
-        if not hasattr(event.message_obj, "group_id"):
+        if not hasattr(event.message_obj, 'group_id'):
             return
-
-        group_id = event.message_obj.group_id
-        message_str = event.message_str.strip()
-
-        for command, func in self.commands.items():
-            if command in message_str:
-                async for result in func(event):
-                    yield result
+        text = event.message_str.strip()
+        for cmd, func in self.commands.items():
+            if text.startswith(cmd):
+                async for res in func(event):
+                    yield res
                 break
 
     async def animewife(self, event: AstrMessageEvent):
-        group_id = event.message_obj.group_id
-        if not group_id:
-            return
-
-        try:
-            user_id = str(event.get_sender_id())
-            nickname = event.get_sender_name()
-        except AttributeError:
-            yield event.plain_result('无法获取用户 ID，请检查消息事件对象。')
-            return
-
-        wife_name = None
+        gid = str(event.message_obj.group_id)
+        uid = str(event.get_sender_id())
+        nick = event.get_sender_name()
         today = get_today()
-        config = load_group_config(group_id)
+        cfg = load_group_config(gid)
 
-        if config and user_id in config:
-            if config[user_id][1] == today:
-                wife_name = config[user_id][0]
-            else:
-                del config[user_id]
-
-        if wife_name is None:
-            if config:
-                for record_id in list(config):
-                    if config[record_id][1] != today:
-                        del config[record_id]
-            local_images = os.listdir(IMG_DIR)
-            if local_images:
-                wife_name = random.choice(local_images)
+        # 检索或随机抽取
+        if cfg.get(uid, [None, ''])[1] != today:
+            if uid in cfg:
+                del cfg[uid]
+            local_imgs = os.listdir(IMG_DIR)
+            if local_imgs:
+                img = random.choice(local_imgs)
             else:
                 try:
-                    response = requests.get(IMAGE_BASE_URL)
-                    if response.status_code == 200:
-                        image_list = response.text.splitlines()
-                        wife_name = random.choice(image_list)
-                    else:
-                        yield event.plain_result('无法获取图片列表，请稍后再试。')
-                        return
-                except Exception as e:
-                    yield event.plain_result(f'获取图片时发生错误: {str(e)}')
+                    resp = requests.get(IMAGE_BASE_URL)
+                    img = random.choice(resp.text.splitlines())
+                except:
+                    yield event.plain_result('获取图片失败')
                     return
-
-        name = wife_name.split('.')[0]
-        text_message = f'{nickname}，你今天的二次元老婆是{name}哒~'
-
-        if os.path.exists(os.path.join(IMG_DIR, wife_name)):
-            image_path = os.path.join(IMG_DIR, wife_name)
-            chain = [
-                Plain(text_message),
-                Image.fromFileSystem(image_path)
-            ]
+            cfg[uid] = [img, today, nick]
+            write_group_config(gid, uid, img, today, nick, cfg)
         else:
-            image_url = IMAGE_BASE_URL + wife_name
-            chain = [
-                Plain(text_message),
-                Image.fromURL(image_url)
-            ]
+            img = cfg[uid][0]
 
+        name = os.path.splitext(img)[0]
+        text = f'{nick}，你今天的二次元老婆是{name}哒~'
+        path = os.path.join(IMG_DIR, img)
+        if os.path.exists(path):
+            chain = [Plain(text), Image.fromFileSystem(path)]
+        else:
+            chain = [Plain(text), Image.fromURL(IMAGE_BASE_URL + img)]
         try:
             yield event.chain_result(chain)
-        except Exception as e:
-            self.context.logger.error(f'发送图片错误: {type(e)}')
-            yield event.plain_result(text_message)
-
-        write_group_config(group_id, user_id, wife_name, get_today(), nickname, config)
+        except:
+            yield event.plain_result(text)
 
     async def ntr_wife(self, event: AstrMessageEvent):
-        group_id = event.message_obj.group_id
-        if not group_id:
-            yield event.plain_result('该功能仅支持群聊。')
-            return
+        gid = str(event.message_obj.group_id)
+        if not ntr_statuses.get(gid, True):
+            yield event.plain_result('牛老婆功能未开启！'); return
+        uid = str(event.get_sender_id()); nick = event.get_sender_name(); today = get_today()
 
-        if not ntr_statuses.get(str(group_id), True):
-            yield event.plain_result('牛老婆功能未开启！')
-            return
+        # 确保记录结构
+        grp = ntr_records.setdefault(gid, {})
+        rec = grp.get(uid, {'date': today, 'count': 0})
+        if rec['date'] != today:
+            rec = {'date': today, 'count': 0}
+        if rec['count'] >= _NTR_MAX:
+            yield event.plain_result(f'{nick}，{NTR_NOTICE}'); return
 
-        try:
-            user_id = str(event.get_sender_id())
-            nickname = event.get_sender_name()
-        except AttributeError:
-            yield event.plain_result('无法获取用户 ID。')
-            return
+        tid = self.parse_target(event)
+        if not tid or tid == uid:
+            msg = '请指定目标' if not tid else '不能牛自己'
+            yield event.plain_result(f'{nick}，{msg}'); return
 
-        if user_id not in ntr_lmt:
-            ntr_lmt[user_id] = 0
-        if ntr_lmt[user_id] >= _ntr_max:
-            yield event.plain_result(f'{nickname}，{ntr_max_notice}')
-            return
+        cfg = load_group_config(gid)
+        if tid not in cfg or cfg[tid][1] != today:
+            yield event.plain_result('对方没有可牛的老婆'); return
 
-        target_id = self.parse_target(event)
-        if not target_id:
-            yield event.plain_result(f'{nickname}，请指定目标')
-            return
-
-        if user_id == target_id:
-            yield event.plain_result(f'{nickname}，不能牛自己')
-            return
-
-        config = load_group_config(group_id)
-        if not config:
-            yield event.plain_result('没有婚姻登记信息')
-            return
-
-        if target_id not in config:
-            yield event.plain_result('对方没有老婆')
-            return
-
-        today = get_today()
-        if config[target_id][1] != today:
-            yield event.plain_result('对方老婆已过期')
-            return
-
-        ntr_lmt[user_id] += 1
+        # 增加尝试
+        rec['count'] += 1; grp[uid] = rec; save_ntr_records()
         if random.random() < ntr_possibility:
-            target_wife = config[target_id][0]
-            del config[target_id]
-            config.pop(user_id, None)
-            write_group_config(group_id, user_id, target_wife, today, nickname, config)
-            yield event.plain_result(f'{nickname}，牛老婆成功！')
+            wife = cfg[tid][0]
+            del cfg[tid]; cfg.pop(uid, None)
+            write_group_config(gid, uid, wife, today, nick, cfg)
+            yield event.plain_result(f'{nick}，牛老婆成功！')
         else:
-            yield event.plain_result(
-                f'{nickname}，失败！剩余次数{_ntr_max - ntr_lmt[user_id]}')
+            rem = _NTR_MAX - rec['count']
+            yield event.plain_result(f'{nick}，失败！剩余次数{rem}')
 
     async def search_wife(self, event: AstrMessageEvent):
-        group_id = event.message_obj.group_id
-        if not group_id:
-            yield event.plain_result('该功能仅支持群聊。')
-            return
-
-        target_id = self.parse_target(event)
-        today = get_today()
-
-        try:
-            user_id = str(event.get_sender_id())
-            nickname = event.get_sender_name()
-        except AttributeError:
-            yield event.plain_result('无法获取用户 ID。')
-            return
-
-        target_id = target_id or user_id
-
-        config = load_group_config(group_id)
-        if not config:
-            yield event.plain_result('没有登记信息！')
-            return
-
-        if target_id not in config:
-            yield event.plain_result('没有找到信息！')
-            return
-
-        if config[target_id][1] != today:
-            yield event.plain_result('老婆已过期')
-            return
-
-        wife_name = config[target_id][0]
-        name = wife_name.split('.')[0]
-        target_nickname = config.get(target_id, [None, None, target_id])[2]
-
-        text_message = f'{target_nickname}的老婆是{name}~'
-
-        if os.path.exists(os.path.join(IMG_DIR, wife_name)):
-            image_path = os.path.join(IMG_DIR, wife_name)
-            chain = [
-                Plain(text_message),
-                Image.fromFileSystem(image_path)
-            ]
-        else:
-            image_url = IMAGE_BASE_URL + wife_name
-            chain = [
-                Plain(text_message),
-                Image.fromURL(image_url)
-            ]
-
-        try:
-            yield event.chain_result(chain)
-        except Exception as e:
-            self.context.logger.error(f'发送图片错误: {type(e)}')
-            yield event.plain_result(text_message)
+        gid = str(event.message_obj.group_id); tid = self.parse_target(event) or str(event.get_sender_id()); today = get_today()
+        cfg = load_group_config(gid)
+        if tid not in cfg or cfg[tid][1] != today:
+            yield event.plain_result('没有找到有效的老婆信息'); return
+        img = cfg[tid][0]; name = os.path.splitext(img)[0]; owner = cfg[tid][2]
+        text = f'{owner}的老婆是{name}~'
+        path = os.path.join(IMG_DIR, img)
+        chain = [Plain(text), Image.fromFileSystem(path) if os.path.exists(path) else Image.fromURL(IMAGE_BASE_URL+img)]
+        try: yield event.chain_result(chain)
+        except: yield event.plain_result(text)
 
     async def switch_ntr(self, event: AstrMessageEvent):
-        group_id = event.message_obj.group_id
-        if not group_id:
-            yield event.plain_result('该功能仅支持群聊。')
-            return
-
-        try:
-            user_id = str(event.get_sender_id())
-            nickname = event.get_sender_name()
-        except AttributeError:
-            yield event.plain_result('无法获取用户 ID。')
-            return
-
-        if user_id not in self.admins:
-            yield event.plain_result(f'{nickname}，无权限')
-            return
-
-        ntr_statuses[str(group_id)] = not ntr_statuses.get(str(group_id), False)
-        save_ntr_statuses()
-        load_ntr_statuses()
-        status_text = '开启' if ntr_statuses[str(group_id)] else '关闭'
-        yield event.plain_result(f'{nickname}，NTR已{status_text}')
+        gid = str(event.message_obj.group_id); uid = str(event.get_sender_id()); nick = event.get_sender_name()
+        if uid not in self.admins: yield event.plain_result(f'{nick}，无权限'); return
+        ntr_statuses[gid] = not ntr_statuses.get(gid, False)
+        save_ntr_statuses(); load_ntr_statuses()
+        state = '开启' if ntr_statuses[gid] else '关闭'
+        yield event.plain_result(f'{nick}，NTR已{state}')
 
     async def change_wife(self, event: AstrMessageEvent):
-        group_id = event.message_obj.group_id
-        if not group_id:
-            yield event.plain_result('该功能仅支持群聊。')
-            return
-
-        try:
-            user_id = str(event.get_sender_id())
-            nickname = event.get_sender_name()
-        except AttributeError:
-            yield event.plain_result('无法获取用户 ID。')
-            return
-
-        today = get_today()
-        group_id_str = str(group_id)
-        user_id_str = str(user_id)
-
-        config = load_group_config(group_id)
-        
-        # 获取当前记录
-        current_record = change_records.get(group_id_str, {}).get(user_id_str, {})
-        if current_record.get('date') == today:
-            if current_record['count'] >= MAX_CHANGES_PER_DAY:
-                yield event.plain_result(
-                    f'{nickname}，今天已经换过{MAX_CHANGES_PER_DAY}次老婆啦！'
-                )
-                return
-
-        # 检查是否有可重置的数据
-        if not config or user_id_str not in config or config[user_id_str][1] != today:
-            yield event.plain_result(f'{nickname}，今天还没有老婆可以换哦！')
-            return
-
-        # 删除原有记录
-        del config[user_id_str]
-        config_file = os.path.join(CONFIG_DIR, f'{group_id}.json')
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(config, f, ensure_ascii=False)
-
+        gid = str(event.message_obj.group_id); uid = str(event.get_sender_id()); nick = event.get_sender_name(); today = get_today()
+        cfg = load_group_config(gid)
+        recs = change_records.setdefault(gid, {})
+        rec = recs.get(uid, {'date':'','count':0})
+        if rec['date'] == today and rec['count'] >= _MAX_CHANGES_PER_DAY:
+            yield event.plain_result(f'{nick}，今天已经换过{_MAX_CHANGES_PER_DAY}次老婆啦！'); return
+        if uid not in cfg or cfg[uid][1] != today:
+            yield event.plain_result(f'{nick}，今天还没有老婆可以换哦！'); return
+        # 删除旧记录
+        del cfg[uid]
+        with open(os.path.join(CONFIG_DIR,f'{gid}.json'),'w',encoding='utf-8') as f:
+            json.dump(cfg,f,ensure_ascii=False,indent=4)
         # 更新换老婆记录
-        if group_id_str not in change_records:
-            change_records[group_id_str] = {}
-        
-        # 初始化或更新记录
-        if change_records[group_id_str].get(user_id_str, {}).get('date') != today:
-            change_records[group_id_str][user_id_str] = {
-                'date': today,
-                'count': 1
-            }
+        if rec['date'] != today:
+            rec = {'date': today, 'count': 1}
         else:
-            change_records[group_id_str][user_id_str]['count'] += 1
-        
-        save_change_records()
+            rec['count'] += 1
+        recs[uid] = rec; save_change_records()
+        # 重新抽老婆
+        async for res in self.animewife(event): yield res
 
-        # 直接触发抽老婆流程
-        async for result in self.animewife(event):
-            yield result
-            
     async def reset_ntr(self, event: AstrMessageEvent):
-        group_id = event.message_obj.group_id
-        if not group_id:
-            yield event.plain_result('该功能仅支持群聊。')
-            return
-
-        try:
-            user_id = str(event.get_sender_id())
-            nickname = event.get_sender_name()
-        except AttributeError:
-            yield event.plain_result('无法获取用户 ID。')
-            return
-
-        # 检查管理员权限
-        if user_id not in self.admins:
-            yield event.plain_result(f'{nickname}，无权限执行此操作。')
-            return
-
-        # 解析被@的目标用户
-        target_id = self.parse_at_target(event)
-        if not target_id:
-            yield event.plain_result(f'{nickname}，请@要重置的用户。')
-            return
-
-        # 重置牛次数
-        if target_id in ntr_lmt:
-            del ntr_lmt[target_id]
-
-        # 构造包含@用户的回复消息
-        chain = [
-            Plain('已重置'),
-            At(qq=int(target_id)),  # 显式指定参数名并确保类型为int
-            Plain('的牛老婆次数。')
-        ]
-        
-        try:
-            yield event.chain_result(chain)
-        except Exception as e:
-            self.context.logger.error(f'发送消息失败: {e}')
-            yield event.plain_result(f'已重置用户{target_id}的牛老婆次数。')
-
-# 每人每天可牛老婆次数
-_ntr_max = 3
-ntr_lmt = {}
-ntr_max_notice = f'每日最多{_ntr_max}次，明天再来~'
-ntr_possibility = 0.20
-ntr_statuses = {}
-
-# 加载 JSON 数据
-def load_group_config(group_id: str):
-    filename = os.path.join(CONFIG_DIR, f'{group_id}.json')
-    try:
-        with open(filename, encoding='utf8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-def write_group_config(group_id: str, link_id: str, wife_name: str, date: str, nickname: str, config):
-    config_file = os.path.join(CONFIG_DIR, f'{group_id}.json')
-    if config is not None:
-        config[link_id] = [wife_name, date, nickname]
-    else:
-        config = {link_id: [wife_name, date, nickname]}
-    with open(config_file, 'w', encoding='utf-8') as f:
-        json.dump(config, f, ensure_ascii=False)
+        gid = str(event.message_obj.group_id); uid = str(event.get_sender_id()); nick = event.get_sender_name()
+        if uid not in self.admins:
+            yield event.plain_result(f'{nick}，无权限执行此操作。'); return
+        tid = self.parse_at_target(event)
+        if not tid:
+            yield event.plain_result(f'{nick}，请@要重置的用户。'); return
+        if gid in ntr_records and tid in ntr_records[gid]:
+            del ntr_records[gid][tid]; save_ntr_records()
+        yield event.chain_result([Plain('已重置'), At(qq=int(tid)), Plain('的牛老婆次数。')])
