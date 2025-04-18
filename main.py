@@ -86,7 +86,7 @@ def save_change_records():
         json.dump(change_records, f, ensure_ascii=False, indent=4)
 
 
-@register("wife_plugin", "monbed", "群二次元老婆插件", "1.1.0", "https://github.com/monbed/astrbot_plugin_AnimeWifeX")
+@register("wife_plugin", "monbed", "群二次元老婆插件", "1.1.1", "https://github.com/monbed/astrbot_plugin_AnimeWifeX")
 class WifePlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -233,9 +233,11 @@ class WifePlugin(Star):
             yield event.plain_result('无法获取用户 ID。')
             return
 
-        if user_id not in ntr_lmt:
-            ntr_lmt[user_id] = 0
-        if ntr_lmt[user_id] >= _ntr_max:
+        today = get_today()
+        rec = ntr_lmt.get(user_id)
+        if not rec or rec.get('date') != today:
+            ntr_lmt[user_id] = {'date': today, 'count': 0}
+        if ntr_lmt[user_id]['count'] >= _ntr_max:
             yield event.plain_result(f'{nickname}，{ntr_max_notice}')
             return
 
@@ -262,7 +264,7 @@ class WifePlugin(Star):
             yield event.plain_result('对方老婆已过期')
             return
 
-        ntr_lmt[user_id] += 1
+        ntr_lmt[user_id]['count'] += 1
         if random.random() < ntr_possibility:
             target_wife = config[target_id][0]
             del config[target_id]
@@ -453,7 +455,7 @@ class WifePlugin(Star):
 
 # 每人每天可牛老婆次数
 _ntr_max = 3
-ntr_lmt = {}
+ntr_lmt = {user_id: {'date': 'YYYY-MM-DD', 'count': int}}
 ntr_max_notice = f'每日最多{_ntr_max}次，明天再来~'
 ntr_possibility = 0.20
 ntr_statuses = {}
