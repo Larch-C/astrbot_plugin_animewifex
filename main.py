@@ -155,7 +155,7 @@ class WifePlugin(Star):
                 group_id = str(event.message_obj.group_id)
                 cfg = load_group_config(group_id)
                 for uid, data in cfg.items():
-                    nick = event.get_sender_name(uid)
+                    nick = event.get_sender_name()
                     if nick and re.search(re.escape(name), nick, re.IGNORECASE):
                         return uid
         return None
