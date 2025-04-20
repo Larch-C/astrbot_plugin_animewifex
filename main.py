@@ -26,7 +26,7 @@ NTR_RECORDS_FILE = os.path.join(CONFIG_DIR, 'ntr_records.json')
 CHANGE_RECORDS_FILE = os.path.join(CONFIG_DIR, 'change_records.json')
 
 # 每人每天可牛老婆次数
-_NTR_MAX = 3
+_NTR_MAX = 5
 # 每天换老婆最大次数
 _MAX_CHANGES_PER_DAY = 3
 # NTR 成功概率
