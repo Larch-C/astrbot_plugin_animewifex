@@ -286,12 +286,58 @@ class WifePlugin(Star):
         async for res in self.animewife(event): yield res
 
     async def reset_ntr(self, event: AstrMessageEvent):
-        gid = str(event.message_obj.group_id); uid = str(event.get_sender_id()); nick = event.get_sender_name()
-        if uid not in self.admins:
-            yield event.plain_result(f'{nick}，无权限执行此操作。'); return
-        tid = self.parse_at_target(event)
-        if not tid:
-            yield event.plain_result(f'{nick}，请@要重置的用户。'); return
-        if gid in ntr_records and tid in ntr_records[gid]:
-            del ntr_records[gid][tid]; save_ntr_records()
-        yield event.chain_result([Plain('已重置'), At(qq=int(tid)), Plain('的牛老婆次数。')])
+        gid = str(event.message_obj.group_id)
+        uid = str(event.get_sender_id())
+        nick = event.get_sender_name()
+        today = get_today()
+
+        # -------- 新增：每日重置次数记录 --------
+        RESET_FILE = os.path.join(CONFIG_DIR, 'reset_ntr_records.json')
+        # 载入或初始化
+        try:
+            reset_records = load_json(RESET_FILE)
+        except:
+            reset_records = {}
+        grp = reset_records.setdefault(gid, {})
+        rec = grp.get(uid, {'date': today, 'count': 0})
+        # 如果不是同一天，重置计数
+        if rec.get('date') != today:
+            rec = {'date': today, 'count': 0}
+        # 限制每天使用两次
+        if rec['count'] >= 2:
+            yield event.plain_result(f'{nick}，今天已使用过2次重置牛功能，明天再来~')
+            return
+        # 更新时间并保存
+        rec['count'] += 1
+        grp[uid] = rec
+        save_json(RESET_FILE, reset_records)
+        # ---------------------------------------
+
+        # 解析目标
+        tid = self.parse_at_target(event) or uid
+
+        # 30% 成功率
+        if random.random() < 0.3:
+            # 成功：清除目标的 NTR 记录
+            if gid in ntr_records and tid in ntr_records[gid]:
+                del ntr_records[gid][tid]
+                save_ntr_records()
+            # 回复成功
+            chain = [
+                Plain('已重置'),
+                At(qq=int(tid)),
+                Plain('的牛老婆次数。')
+            ]
+            yield event.chain_result(chain)
+        else:
+            # 失败：禁言 300 秒
+            client = event.bot
+            try:
+                await client.set_group_ban(
+                    group_id=int(gid),
+                    user_id=int(uid),
+                    duration=300
+                )
+            except:
+                pass
+            yield event.plain_result(f'{nick}，重置牛失败，已被禁言300秒。')
