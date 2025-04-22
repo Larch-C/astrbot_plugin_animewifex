@@ -38,7 +38,7 @@
     "image_base_url": {
         "description": "图片服务器基础 URL",
         "type": "string",
-        "default": "http://127.0.0.1:7788/?/img/",
+        "default": "",
         "hint": "用于拉取二次元老婆图片的基础地址"
     }
 }
