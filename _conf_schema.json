@@ -1,0 +1,44 @@
+{
+    "ntr_max": {
+        "description": "每日可牛老婆次数",
+        "type": "int",
+        "default": 3,
+        "hint": "每天最多可以牛老婆的次数"
+    },
+    "ntr_possibility": {
+        "description": "NTR 成功概率",
+        "type": "float",
+        "default": 0.20,
+        "hint": "牛老婆成功的概率，取值范围 [0, 1]"
+    },
+    "change_max_per_day": {
+        "description": "每天换老婆最大次数",
+        "type": "int",
+        "default": 3,
+        "hint": "每天最多更换二次元老婆的次数"
+    },
+    "reset_max_uses_per_day": {
+        "description": "重置牛功能每天可使用次数",
+        "type": "int",
+        "default": 2,
+        "hint": "每天可以重置他人牛老婆次数的次数"
+    },
+    "reset_success_rate": {
+        "description": "重置牛功能成功率",
+        "type": "float",
+        "default": 0.30,
+        "hint": "重置牛老婆次数的成功率，取值范围 [0, 1]"
+    },
+    "reset_mute_duration": {
+        "description": "重置失败时禁言时长（秒）",
+        "type": "int",
+        "default": 300,
+        "hint": "重置失败后禁言时长，单位秒"
+    },
+    "image_base_url": {
+        "description": "图片服务器基础 URL",
+        "type": "string",
+        "default": "http://127.0.0.1:7788/?/img/",
+        "hint": "用于拉取二次元老婆图片的基础地址"
+    }
+}
