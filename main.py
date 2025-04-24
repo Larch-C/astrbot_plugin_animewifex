@@ -310,6 +310,15 @@ class WifePlugin(Star):
         nick = event.get_sender_name()
         today = get_today()
 
+        if uid in self.admins:
+            tid = self.parse_at_target(event) or uid
+            if gid in ntr_records and tid in ntr_records[gid]:
+                del ntr_records[gid][tid]
+                save_ntr_records()
+            chain = [Plain('管理员操作：已重置'), At(qq=int(tid)), Plain('的牛老婆次数。')]
+            yield event.chain_result(chain)
+            return
+
         reset_records = load_json(RESET_RECORDS_FILE)
         grp = reset_records.setdefault(gid, {})
         rec = grp.get(uid, {'date': today, 'count': 0})
@@ -330,9 +339,8 @@ class WifePlugin(Star):
             chain = [Plain('已重置'), At(qq=int(tid)), Plain('的牛老婆次数。')]
             yield event.chain_result(chain)
         else:
-            client = event.bot
             try:
-                await client.set_group_ban(group_id=int(gid), user_id=int(uid), duration=self.reset_mute_duration)
+                await event.bot.set_group_ban(group_id=int(gid), user_id=int(uid), duration=self.reset_mute_duration)
             except:
                 pass
             yield event.plain_result(f'{nick}，重置牛失败，已被禁言{self.reset_mute_duration}秒。')
