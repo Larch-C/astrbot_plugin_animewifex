@@ -4,7 +4,7 @@ import random
 import os
 import re
 import json
-import requests
+import aiohttp
 
 PLUGIN_DIR = os.path.join('data', 'plugins', 'astrbot_plugin_AnimeWife')
 os.makedirs(PLUGIN_DIR, exist_ok=True)
@@ -81,7 +81,6 @@ def load_change_records():
 
 def save_change_records():
     save_json(CHANGE_RECORDS_FILE, change_records)
-
 
 
 def load_group_config(group_id: str):
@@ -183,8 +182,10 @@ class WifePlugin(Star):
                 img = random.choice(local_imgs)
             else:
                 try:
-                    resp = requests.get(self.image_base_url)
-                    img = random.choice(resp.text.splitlines())
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(self.image_base_url) as resp:
+                            text = await resp.text()
+                            img = random.choice(text.splitlines())
                 except:
                     yield event.plain_result('获取图片失败')
                     return
