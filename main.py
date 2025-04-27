@@ -6,7 +6,7 @@ import re
 import json
 import aiohttp
 
-PLUGIN_DIR = os.path.join('data', 'plugins', 'astrbot_plugin_AnimeWife')
+PLUGIN_DIR = os.path.join('data', 'astrbot_plugin_AnimeWife')
 os.makedirs(PLUGIN_DIR, exist_ok=True)
 
 CONFIG_DIR = os.path.join(PLUGIN_DIR, 'config')
