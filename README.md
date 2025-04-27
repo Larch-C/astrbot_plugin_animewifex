@@ -1,7 +1,6 @@
-原插件：https://github.com/zgojin/astrbot_plugin_AW
+原插件：https://github.com/zgojin/astrbot_plugin_AW在此基础上添加了几个功能
 
 本插件代码为AI生成，下面图图床也是。
-在此基础上添加了几个功能
 
 配套图床：https://github.com/monbed/wife
 ## 指令 ##
