@@ -3,7 +3,7 @@
         "description": "每日可牛老婆次数",
         "type": "int",
         "default": 3,
-        "hint": "每天最多可以牛老婆的次数"
+        "hint": "每天可以牛老婆的次数"
     },
     "ntr_possibility": {
         "description": "NTR 成功概率",
@@ -15,13 +15,13 @@
         "description": "每天换老婆最大次数",
         "type": "int",
         "default": 3,
-        "hint": "每天最多更换二次元老婆的次数"
+        "hint": "每天最多更换老婆的次数"
     },
     "reset_max_uses_per_day": {
         "description": "重置牛功能每天可使用次数",
         "type": "int",
         "default": 2,
-        "hint": "每天可以重置他人牛老婆次数的次数"
+        "hint": "每天可以重置牛老婆的次数"
     },
     "reset_success_rate": {
         "description": "重置牛功能成功率",
