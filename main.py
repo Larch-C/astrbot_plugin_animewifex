@@ -102,7 +102,7 @@ load_ntr_statuses()
 load_ntr_records()
 load_change_records()
 
-@register("wife_plugin", "monbed", "群二次元老婆插件", "1.5.0", "https://github.com/monbed/astrbot_plugin_AnimeWifeX")
+@register("animewifex_plugin", "monbed", "群二次元老婆插件修改版", "1.5.1", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
