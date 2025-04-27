@@ -1,4 +1,5 @@
-原插件：https://github.com/zgojin/astrbot_plugin_AW在此基础上添加了几个功能
+原插件：https://github.com/zgojin/astrbot_plugin_AW
+在此基础上添加了几个功能
 
 本插件代码为AI生成，下面图图床也是。
 
