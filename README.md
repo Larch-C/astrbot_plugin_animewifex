@@ -5,6 +5,9 @@
 本插件代码为AI生成，下面图床的也是。
 
 配套图床：https://github.com/monbed/wife
+
+也可以手动下载图片，放入data\animewifexdata\img\wife目录。
+
 ## 指令 ##
 - `抽老婆` 每天一次，随机抽一张二次元老婆
 - `查老婆` 查看今日老婆 加@可以查看别人老婆
