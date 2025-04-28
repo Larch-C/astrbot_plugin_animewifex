@@ -7,7 +7,7 @@ import re
 import json
 import aiohttp
 
-PLUGIN_DIR = StarTools.get_data_dir("animewifex_plugin")
+PLUGIN_DIR = StarTools.get_data_dir("astrbot_plugin_animewifex")
 CONFIG_DIR = os.path.join(PLUGIN_DIR, 'config')
 IMG_DIR = os.path.join(PLUGIN_DIR, 'img', 'wife')
 os.makedirs(CONFIG_DIR, exist_ok=True)
