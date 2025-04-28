@@ -1,4 +1,5 @@
 from astrbot.api.all import *
+from astrbot.api.star import StarTools
 from datetime import datetime, timedelta
 import random
 import os
@@ -6,19 +7,16 @@ import re
 import json
 import aiohttp
 
-PLUGIN_DIR = os.path.join('data', 'animewifexdata')
-os.makedirs(PLUGIN_DIR, exist_ok=True)
-
+PLUGIN_DIR = StarTools.get_data_dir("animewifex_plugin")
 CONFIG_DIR = os.path.join(PLUGIN_DIR, 'config')
-os.makedirs(CONFIG_DIR, exist_ok=True)
-
 IMG_DIR = os.path.join(PLUGIN_DIR, 'img', 'wife')
+os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
 
-NTR_STATUS_FILE = os.path.join(CONFIG_DIR, 'ntr_status.json')
-NTR_RECORDS_FILE = os.path.join(CONFIG_DIR, 'ntr_records.json')
+NTR_STATUS_FILE     = os.path.join(CONFIG_DIR, 'ntr_status.json')
+NTR_RECORDS_FILE    = os.path.join(CONFIG_DIR, 'ntr_records.json')
 CHANGE_RECORDS_FILE = os.path.join(CONFIG_DIR, 'change_records.json')
-RESET_RECORDS_FILE = os.path.join(CONFIG_DIR, 'reset_ntr_records.json')
+RESET_RECORDS_FILE  = os.path.join(CONFIG_DIR, 'reset_ntr_records.json')
 
 
 def get_today():
@@ -44,30 +42,14 @@ def save_json(path, data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 ntr_statuses = {}
-ntr_records = {}
+ntr_records  = {}
 change_records = {}
 
-
-def load_ntr_statuses():
-    global ntr_statuses
-    ntr_statuses = load_json(NTR_STATUS_FILE)
-
-
-def save_ntr_statuses():
-    save_json(NTR_STATUS_FILE, ntr_statuses)
-
-
-def load_ntr_records():
-    global ntr_records
-    ntr_records = load_json(NTR_RECORDS_FILE)
-
-
-def save_ntr_records():
-    save_json(NTR_RECORDS_FILE, ntr_records)
+load_ntr_statuses = lambda: globals().update(ntr_statuses=load_json(NTR_STATUS_FILE))
+load_ntr_records  = lambda: globals().update(ntr_records=load_json(NTR_RECORDS_FILE))
 
 
 def load_change_records():
-    global change_records
     raw = load_json(CHANGE_RECORDS_FILE)
     change_records.clear()
     for gid, users in raw.items():
@@ -78,12 +60,12 @@ def load_change_records():
             else:
                 change_records[gid][uid] = rec
 
+save_ntr_statuses  = lambda: save_json(NTR_STATUS_FILE, ntr_statuses)
+save_ntr_records   = lambda: save_json(NTR_RECORDS_FILE, ntr_records)
+save_change_records = lambda: save_json(CHANGE_RECORDS_FILE, change_records)
 
-def save_change_records():
-    save_json(CHANGE_RECORDS_FILE, change_records)
 
-
-def load_group_config(group_id: str):
+def load_group_config(group_id: str) -> dict:
     path = os.path.join(CONFIG_DIR, f'{group_id}.json')
     try:
         with open(path, 'r', encoding='utf-8') as f:
@@ -107,13 +89,13 @@ class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
-        self.ntr_max = config.get('ntr_max')
-        self.ntr_possibility = config.get('ntr_possibility')
-        self.change_max_per_day = config.get('change_max_per_day')
+        self.ntr_max              = config.get('ntr_max')
+        self.ntr_possibility      = config.get('ntr_possibility')
+        self.change_max_per_day   = config.get('change_max_per_day')
         self.reset_max_uses_per_day = config.get('reset_max_uses_per_day')
-        self.reset_success_rate = config.get('reset_success_rate')
-        self.reset_mute_duration = config.get('reset_mute_duration')
-        self.image_base_url = config.get('image_base_url')
+        self.reset_success_rate   = config.get('reset_success_rate')
+        self.reset_mute_duration  = config.get('reset_mute_duration')
+        self.image_base_url       = config.get('image_base_url')
 
         self.commands = {
             "抽老婆": self.animewife,
