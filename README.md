@@ -6,7 +6,7 @@
 
 配套图床：https://github.com/monbed/wife
 
-也可以手动下载图片，放入data\animewifexdata\img\wife目录。
+也可以手动下载图片，放入AstrBot\data\plugin_data\astrbot_plugin_animewifex\img\wife目录。
 
 ## 指令 ##
 - `抽老婆` 每天一次，随机抽一张二次元老婆
