@@ -40,5 +40,11 @@
         "type": "string",
         "default": "",
         "hint": "用于拉取二次元老婆图片的基础地址"
+    },
+    "swap_max_per_day": {
+        "description": "交换老婆功能每天可使用次数",
+        "type": "int",
+        "default": 2,
+        "hint": "每天可以交换老婆的次数"
     }
 }

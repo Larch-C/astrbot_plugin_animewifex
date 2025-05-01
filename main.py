@@ -17,7 +17,8 @@ NTR_STATUS_FILE     = os.path.join(CONFIG_DIR, 'ntr_status.json')
 NTR_RECORDS_FILE    = os.path.join(CONFIG_DIR, 'ntr_records.json')
 CHANGE_RECORDS_FILE = os.path.join(CONFIG_DIR, 'change_records.json')
 RESET_RECORDS_FILE  = os.path.join(CONFIG_DIR, 'reset_ntr_records.json')
-
+SWAP_REQUESTS_FILE  = os.path.join(CONFIG_DIR, 'swap_requests.json')
+SWAP_LIMIT_FILE     = os.path.join(CONFIG_DIR, 'swap_limit_records.json')
 
 def get_today():
     """获取当前上海时区日期字符串"""
@@ -44,7 +45,8 @@ def save_json(path, data):
 ntr_statuses = {}
 ntr_records  = {}
 change_records = {}
-
+swap_requests = {}
+swap_limit_records = {}
 load_ntr_statuses = lambda: globals().update(ntr_statuses=load_json(NTR_STATUS_FILE))
 load_ntr_records  = lambda: globals().update(ntr_records=load_json(NTR_RECORDS_FILE))
 
@@ -80,11 +82,35 @@ def write_group_config(group_id: str, user_id: str, wife_name: str, date: str, n
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(config, f, ensure_ascii=False, indent=4)
 
+def load_swap_requests():
+    raw = load_json(SWAP_REQUESTS_FILE)
+    today = get_today()
+    cleaned = {}
+    for gid, reqs in raw.items():
+        valid = {}
+        for uid, rec in reqs.items():
+            if rec.get('date') == today:
+                valid[uid] = rec
+        if valid:
+            cleaned[gid] = valid
+    globals()['swap_requests'] = cleaned
+    if raw != cleaned:
+        save_json(SWAP_REQUESTS_FILE, cleaned)
+
+save_swap_requests = lambda: save_json(SWAP_REQUESTS_FILE, swap_requests)
+
+def load_swap_limit_records():
+    globals()['swap_limit_records'] = load_json(SWAP_LIMIT_FILE)
+
+save_swap_limit_records = lambda: save_json(SWAP_LIMIT_FILE, swap_limit_records)
+
 load_ntr_statuses()
 load_ntr_records()
 load_change_records()
+load_swap_requests()
+load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.1", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.2", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -96,6 +122,7 @@ class WifePlugin(Star):
         self.reset_success_rate   = config.get('reset_success_rate')
         self.reset_mute_duration  = config.get('reset_mute_duration')
         self.image_base_url       = config.get('image_base_url')
+        self.swap_max_per_day       = config.get('swap_max_per_day')
 
         self.commands = {
             "抽老婆": self.animewife,
@@ -103,7 +130,10 @@ class WifePlugin(Star):
             "查老婆": self.search_wife,
             "切换ntr开关状态": self.switch_ntr,
             "换老婆": self.change_wife,
-            "重置牛": self.reset_ntr
+            "重置牛": self.reset_ntr,
+            "交换老婆": self.swap_wife,
+            "同意交换": self.agree_swap_wife,
+            "拒绝交换": self.reject_swap_wife
         }
         self.admins = self.load_admins()
 
@@ -327,3 +357,82 @@ class WifePlugin(Star):
             except:
                 pass
             yield event.plain_result(f'{nick}，重置牛失败，已被禁言{self.reset_mute_duration}秒。')
+
+    async def swap_wife(self, event: AstrMessageEvent):
+        gid  = str(event.message_obj.group_id)
+        uid  = str(event.get_sender_id())
+        tid  = self.parse_at_target(event)
+        nick = event.get_sender_name()
+        today = get_today()
+
+        grp_limit = swap_limit_records.setdefault(gid, {})
+        rec_lim  = grp_limit.get(uid, {'date':'','count':0})
+        if rec_lim['date'] != today:
+            rec_lim = {'date': today, 'count': 0}
+        if rec_lim['count'] >= self.swap_max_per_day:
+            yield event.plain_result(f"{nick}，今天已发起{self.swap_max_per_day}次请求，明天再来~")
+            return
+
+        if not tid or tid == uid:
+            yield event.plain_result(f'{nick}，请在命令后 @ 另一位用户。')
+            return
+
+        cfg = load_group_config(gid)
+        for x in (uid, tid):
+            if x not in cfg or cfg[x][1] != today:
+                who = nick if x == uid else '对方'
+                yield event.plain_result(f'{who}今天还没有老婆，无法交换。')
+                return
+
+        rec_lim['count'] += 1
+        grp_limit[uid] = rec_lim
+        save_swap_limit_records()
+
+        grp = swap_requests.setdefault(gid, {})
+        grp[uid] = {'target': tid, 'date': today}
+        save_swap_requests()
+
+        yield event.chain_result([
+            Plain(f'{nick} 请求与 '), At(qq=int(tid)),
+            Plain(' 交换老婆，请对方用“同意交换 @发起者”或“拒绝交换 @发起者”。')
+        ])
+
+    async def agree_swap_wife(self, event: AstrMessageEvent):
+        gid  = str(event.message_obj.group_id)
+        tid  = str(event.get_sender_id())
+        uid  = self.parse_at_target(event)
+        nick = event.get_sender_name()
+
+        grp = swap_requests.get(gid, {})
+        rec = grp.get(uid)
+        if not rec or rec.get('target') != tid:
+            yield event.plain_result(f'{nick}，没有未处理的交换请求。')
+            return
+
+        cfg = load_group_config(gid)
+        img_u, date_u, nick_u = cfg[uid]
+        img_t, date_t, nick_t = cfg[tid]
+        cfg[uid][0]  = img_t
+        cfg[tid][0]  = img_u
+        save_json(os.path.join(CONFIG_DIR, f'{gid}.json'), cfg)
+
+        del grp[uid]
+        save_swap_requests()
+
+        yield event.plain_result('交换成功！')
+
+    async def reject_swap_wife(self, event: AstrMessageEvent):
+        gid  = str(event.message_obj.group_id)
+        tid  = str(event.get_sender_id())
+        uid  = self.parse_at_target(event)
+        nick = event.get_sender_name()
+
+        grp = swap_requests.get(gid, {})
+        rec = grp.get(uid)
+        if not rec or rec.get('target') != tid:
+            yield event.plain_result(f'{nick}，没有未处理的交换请求。')
+            return
+
+        del grp[uid]
+        save_swap_requests()
+        yield event.chain_result([At(qq=int(uid)), Plain('，对方拒绝了交换请求。')])
