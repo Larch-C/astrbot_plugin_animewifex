@@ -110,7 +110,7 @@ load_change_records()
 load_swap_requests()
 load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.2", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.3", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -406,7 +406,7 @@ class WifePlugin(Star):
         grp = swap_requests.get(gid, {})
         rec = grp.get(uid)
         if not rec or rec.get('target') != tid:
-            yield event.plain_result(f'{nick}，没有未处理的交换请求。')
+            yield event.plain_result(f'{nick}，请在命令后@发起者。')
             return
 
         cfg = load_group_config(gid)
@@ -430,7 +430,7 @@ class WifePlugin(Star):
         grp = swap_requests.get(gid, {})
         rec = grp.get(uid)
         if not rec or rec.get('target') != tid:
-            yield event.plain_result(f'{nick}，没有未处理的交换请求。')
+            yield event.plain_result(f'{nick}，请在命令后@发起者。')
             return
 
         del grp[uid]
