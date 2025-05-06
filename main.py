@@ -110,7 +110,7 @@ load_change_records()
 load_swap_requests()
 load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.3", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.4", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -133,7 +133,8 @@ class WifePlugin(Star):
             "重置牛": self.reset_ntr,
             "交换老婆": self.swap_wife,
             "同意交换": self.agree_swap_wife,
-            "拒绝交换": self.reject_swap_wife
+            "拒绝交换": self.reject_swap_wife,
+            "查看交换请求": self.view_swap_requests
         }
         self.admins = self.load_admins()
 
@@ -381,7 +382,7 @@ class WifePlugin(Star):
         for x in (uid, tid):
             if x not in cfg or cfg[x][1] != today:
                 who = nick if x == uid else '对方'
-                yield event.plain_result(f'{who}今天还没有老婆，无法交换。')
+                yield event.plain_result(f'{who}，今天还没有老婆，无法交换。')
                 return
 
         rec_lim['count'] += 1
@@ -406,7 +407,7 @@ class WifePlugin(Star):
         grp = swap_requests.get(gid, {})
         rec = grp.get(uid)
         if not rec or rec.get('target') != tid:
-            yield event.plain_result(f'{nick}，请在命令后@发起者。')
+            yield event.plain_result(f'{nick}，请在命令后@发起者，或通过"查看交换请求"查看当前请求。')
             return
 
         cfg = load_group_config(gid)
@@ -430,9 +431,45 @@ class WifePlugin(Star):
         grp = swap_requests.get(gid, {})
         rec = grp.get(uid)
         if not rec or rec.get('target') != tid:
-            yield event.plain_result(f'{nick}，请在命令后@发起者。')
+            yield event.plain_result(f'{nick}，请在命令后@发起者，或通过"查看交换请求"查看当前请求。')
             return
 
         del grp[uid]
         save_swap_requests()
         yield event.chain_result([At(qq=int(uid)), Plain('，对方拒绝了交换请求。')])
+
+    async def view_swap_requests(self, event: AstrMessageEvent):
+        """
+        查看当前用户发起或@到自己的交换请求：
+          - 如果既没发起也没人向自己发起，提示未找到请求；
+          - 否则列出所有相关请求，并提示使用“同意交换 @发起者”或“拒绝交换 @发起者”。
+          发起时展示目标用户昵称，收到时展示发起者昵称。
+        """
+        gid = str(event.message_obj.group_id)
+        me = str(event.get_sender_id())
+        today = get_today()
+
+        grp = swap_requests.get(gid, {})
+        cfg = load_group_config(gid)
+
+        sent_targets = [rec['target'] for uid, rec in grp.items() if uid == me]
+        received_from = [uid for uid, rec in grp.items() if rec.get('target') == me]
+
+        if not sent_targets and not received_from:
+            yield event.plain_result('未找到交换请求')
+            return
+
+        parts = []
+        for tid in sent_targets:
+            name = cfg.get(tid, [None, None, '未知用户'])[2]
+            parts.append(f'→ 我发起给 {name} 的请求')
+        for uid in received_from:
+            name = cfg.get(uid, [None, None, '未知用户'])[2]
+            parts.append(f'→ {name} 发起给我的请求')
+
+        text = (
+            '当前交换请求：\n'
+            + '\n'.join(parts)
+            + '\n请在“同意交换”或“拒绝交换”命令后 @ 发起者'
+        )
+        yield event.plain_result(text)
