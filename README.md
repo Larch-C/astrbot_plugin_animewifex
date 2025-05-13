@@ -1,3 +1,5 @@
+![:name]https://count.getloli.com/@astrbot_plugin_animewifex?theme=capoo-2
+
 原插件：https://github.com/zgojin/astrbot_plugin_AW
 
 在此基础上添加了几个功能，更改了数据目录，支持插件面板配置。
