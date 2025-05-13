@@ -1,4 +1,4 @@
-(![:name]https://count.getloli.com/@astrbot_plugin_animewifex?name=astrbot_plugin_animewifex&theme=capoo-2&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
+![:name](https://count.getloli.com/@astrbot_plugin_animewifex?name=astrbot_plugin_animewifex&theme=capoo-2&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
 原插件：https://github.com/zgojin/astrbot_plugin_AW
 
