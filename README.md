@@ -1,4 +1,3 @@
-![:name](https://count.getloli.com/@astrbot_plugin_animewifex?theme=capoo-2)
 
 原插件：https://github.com/zgojin/astrbot_plugin_AW
 
