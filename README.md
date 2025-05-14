@@ -23,3 +23,7 @@
 - `同意交换` @用户同意
 - `拒绝交换` @用户拒绝
 - `查看交换请求` 查看交换老婆请求
+
+## 相关
+- [astrbot_plugin_AW](https://github.com/zgojin/astrbot_plugin_AW)
+- [Astrbot](https://astrbot.app/) 易于上手的多平台聊天机器人及开发框架。
