@@ -26,4 +26,4 @@
 
 ## 相关
 - [astrbot_plugin_AW](https://github.com/zgojin/astrbot_plugin_AW)
-- [Astrbot](https://astrbot.app/) 易于上手的多平台聊天机器人及开发框架。
+- [Astrbot](https://astrbot.app/)
