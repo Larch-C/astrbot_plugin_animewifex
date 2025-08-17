@@ -13,18 +13,17 @@ IMG_DIR = os.path.join(PLUGIN_DIR, 'img', 'wife')
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
 
-NTR_STATUS_FILE     = os.path.join(CONFIG_DIR, 'ntr_status.json')
-NTR_RECORDS_FILE    = os.path.join(CONFIG_DIR, 'ntr_records.json')
+NTR_STATUS_FILE = os.path.join(CONFIG_DIR, 'ntr_status.json')
+NTR_RECORDS_FILE = os.path.join(CONFIG_DIR, 'ntr_records.json')
 CHANGE_RECORDS_FILE = os.path.join(CONFIG_DIR, 'change_records.json')
-RESET_RECORDS_FILE  = os.path.join(CONFIG_DIR, 'reset_ntr_records.json')
-SWAP_REQUESTS_FILE  = os.path.join(CONFIG_DIR, 'swap_requests.json')
-SWAP_LIMIT_FILE     = os.path.join(CONFIG_DIR, 'swap_limit_records.json')
+RESET_RECORDS_FILE = os.path.join(CONFIG_DIR, 'reset_ntr_records.json')
+SWAP_REQUESTS_FILE = os.path.join(CONFIG_DIR, 'swap_requests.json')
+SWAP_LIMIT_FILE = os.path.join(CONFIG_DIR, 'swap_limit_records.json')
 
 def get_today():
     """获取当前上海时区日期字符串"""
     utc_now = datetime.utcnow()
     return (utc_now + timedelta(hours=8)).date().isoformat()
-
 
 def load_json(path):
     """安全加载 JSON 文件"""
@@ -110,20 +109,22 @@ load_change_records()
 load_swap_requests()
 load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.4", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.5", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
-        self.ntr_max              = config.get('ntr_max')
-        self.ntr_possibility      = config.get('ntr_possibility')
-        self.change_max_per_day   = config.get('change_max_per_day')
+        # 配置参数初始化
+        self.ntr_max = config.get('ntr_max')
+        self.ntr_possibility = config.get('ntr_possibility')
+        self.change_max_per_day = config.get('change_max_per_day')
         self.reset_max_uses_per_day = config.get('reset_max_uses_per_day')
-        self.reset_success_rate   = config.get('reset_success_rate')
-        self.reset_mute_duration  = config.get('reset_mute_duration')
-        self.image_base_url       = config.get('image_base_url')
-        self.swap_max_per_day       = config.get('swap_max_per_day')
+        self.reset_success_rate = config.get('reset_success_rate')
+        self.reset_mute_duration = config.get('reset_mute_duration')
+        self.image_base_url = config.get('image_base_url')
+        self.swap_max_per_day = config.get('swap_max_per_day')
 
+        # 命令与处理函数映射
         self.commands = {
             "抽老婆": self.animewife,
             "牛老婆": self.ntr_wife,
@@ -139,6 +140,7 @@ class WifePlugin(Star):
         self.admins = self.load_admins()
 
     def load_admins(self):
+        # 加载管理员列表
         path = os.path.join('data', 'cmd_config.json')
         try:
             with open(path, 'r', encoding='utf-8-sig') as f:
@@ -148,12 +150,14 @@ class WifePlugin(Star):
             return []
 
     def parse_at_target(self, event):
+        # 解析@目标用户
         for comp in event.message_obj.message:
             if isinstance(comp, At):
                 return str(comp.qq)
         return None
 
     def parse_target(self, event):
+        # 解析命令目标用户
         target = self.parse_at_target(event)
         if target:
             return target
@@ -171,6 +175,7 @@ class WifePlugin(Star):
 
     @event_message_type(EventMessageType.ALL)
     async def on_all_messages(self, event: AstrMessageEvent):
+        # 消息分发，根据命令调用对应方法
         if not hasattr(event.message_obj, 'group_id'):
             return
         text = event.message_str.strip()
@@ -181,6 +186,7 @@ class WifePlugin(Star):
                 break
 
     async def animewife(self, event: AstrMessageEvent):
+        # 抽老婆主逻辑
         gid = str(event.message_obj.group_id)
         uid = str(event.get_sender_id())
         nick = event.get_sender_name()
@@ -188,6 +194,7 @@ class WifePlugin(Star):
         cfg = load_group_config(gid)
 
         if cfg.get(uid, [None, ''])[1] != today:
+            # 如果今天还没抽，重新抽取
             if uid in cfg:
                 del cfg[uid]
             local_imgs = os.listdir(IMG_DIR)
@@ -220,6 +227,7 @@ class WifePlugin(Star):
             yield event.plain_result(text)
 
     async def ntr_wife(self, event: AstrMessageEvent):
+        # 牛老婆主逻辑
         gid = str(event.message_obj.group_id)
         if not ntr_statuses.get(gid, True):
             yield event.plain_result('牛老婆功能未开启！')
@@ -255,12 +263,20 @@ class WifePlugin(Star):
             del cfg[tid]
             cfg.pop(uid, None)
             write_group_config(gid, uid, wife, today, nick, cfg)
+            # 检查并取消相关交换请求
+            cancel_msg = await self.cancel_swap_on_wife_change(gid, [uid, tid])
             yield event.plain_result(f'{nick}，牛老婆成功！')
+            if cancel_msg:
+                yield event.plain_result(cancel_msg)
+            # 立即为新老婆抽取并展示
+            async for res in self.animewife(event):
+                yield res
         else:
             rem = self.ntr_max - rec['count']
             yield event.plain_result(f'{nick}，失败！剩余次数{rem}')
 
     async def search_wife(self, event: AstrMessageEvent):
+        # 查老婆主逻辑
         gid = str(event.message_obj.group_id)
         tid = self.parse_target(event) or str(event.get_sender_id())
         today = get_today()
@@ -280,6 +296,7 @@ class WifePlugin(Star):
             yield event.plain_result(text)
 
     async def switch_ntr(self, event: AstrMessageEvent):
+        # 切换NTR开关，仅管理员可用
         gid = str(event.message_obj.group_id)
         uid = str(event.get_sender_id())
         nick = event.get_sender_name()
@@ -293,6 +310,7 @@ class WifePlugin(Star):
         yield event.plain_result(f'{nick}，NTR已{state}')
 
     async def change_wife(self, event: AstrMessageEvent):
+        # 换老婆主逻辑
         gid = str(event.message_obj.group_id)
         uid = str(event.get_sender_id())
         nick = event.get_sender_name()
@@ -315,10 +333,16 @@ class WifePlugin(Star):
             rec['count'] += 1
         recs[uid] = rec
         save_change_records()
+        # 检查并取消相关交换请求
+        cancel_msg = await self.cancel_swap_on_wife_change(gid, [uid])
+        if cancel_msg:
+            yield event.plain_result(cancel_msg)
+        # 立即为新老婆抽取并展示
         async for res in self.animewife(event):
             yield res
 
     async def reset_ntr(self, event: AstrMessageEvent):
+        # 重置牛老婆次数
         gid = str(event.message_obj.group_id)
         uid = str(event.get_sender_id())
         nick = event.get_sender_name()
@@ -360,6 +384,7 @@ class WifePlugin(Star):
             yield event.plain_result(f'{nick}，重置牛失败，已被禁言{self.reset_mute_duration}秒。')
 
     async def swap_wife(self, event: AstrMessageEvent):
+        # 发起交换老婆请求
         gid  = str(event.message_obj.group_id)
         uid  = str(event.get_sender_id())
         tid  = self.parse_at_target(event)
@@ -399,6 +424,7 @@ class WifePlugin(Star):
         ])
 
     async def agree_swap_wife(self, event: AstrMessageEvent):
+        # 同意交换老婆
         gid  = str(event.message_obj.group_id)
         tid  = str(event.get_sender_id())
         uid  = self.parse_at_target(event)
@@ -423,6 +449,7 @@ class WifePlugin(Star):
         yield event.plain_result('交换成功！')
 
     async def reject_swap_wife(self, event: AstrMessageEvent):
+        # 拒绝交换老婆
         gid  = str(event.message_obj.group_id)
         tid  = str(event.get_sender_id())
         uid  = self.parse_at_target(event)
@@ -473,3 +500,32 @@ class WifePlugin(Star):
             + '\n请在“同意交换”或“拒绝交换”命令后 @ 发起者'
         )
         yield event.plain_result(text)
+
+    async def cancel_swap_on_wife_change(self, gid, user_ids):
+        """
+        检查并取消与user_ids相关的交换请求，返还交换次数，并返回提示文本（如有）。
+        """
+        changed = False
+        today = get_today()
+        grp = swap_requests.get(gid, {})
+        grp_limit = swap_limit_records.setdefault(gid, {})
+        to_cancel = []
+        for req_uid, req in grp.items():
+            if req_uid in user_ids or req.get('target') in user_ids:
+                to_cancel.append(req_uid)
+        for req_uid in to_cancel:
+            # 返还次数
+            rec_lim = grp_limit.get(req_uid, {'date': '', 'count': 0})
+            if rec_lim.get('date') == today and rec_lim.get('count', 0) > 0:
+                rec_lim['count'] = max(0, rec_lim['count'] - 1)
+                grp_limit[req_uid] = rec_lim
+                changed = True
+            del grp[req_uid]
+        if to_cancel:
+            save_swap_requests()
+        if changed:
+            save_swap_limit_records()
+        # 返回提示文本，由调用方 yield
+        if to_cancel:
+            return '交换对象老婆已变更，取消交换请求并返还次数。'
+        return None
