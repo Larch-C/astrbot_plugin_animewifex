@@ -8,6 +8,10 @@
 
 **本插件代码为AI生成，下面图床的也是。**
 
+#v1.5.5完善交换老婆逻辑，牛老婆成功后立刻显示。
+
+#v1.5.6老婆信息显示出处，需要更新图包。
+
 配套图床：https://github.com/monbed/wife
 
 也可以手动下载图片，放入AstrBot\data\plugin_data\astrbot_plugin_animewifex\img\wife目录。
