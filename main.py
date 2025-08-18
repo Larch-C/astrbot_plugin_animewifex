@@ -109,7 +109,7 @@ load_change_records()
 load_swap_requests()
 load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.5", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.6", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -214,8 +214,13 @@ class WifePlugin(Star):
         else:
             img = cfg[uid][0]
 
+        # 新增：解析出处和角色名，分隔符为#
         name = os.path.splitext(img)[0]
-        text = f'{nick}，你今天的二次元老婆是{name}哒~'
+        if '#' in name:
+            source, chara = name.split('#', 1)
+            text = f'{nick}，你今天的老婆是来自《{source}》的{chara}'
+        else:
+            text = f'{nick}，你今天的老婆是{name}'
         path = os.path.join(IMG_DIR, img)
         if os.path.exists(path):
             chain = [Plain(text), Image.fromFileSystem(path)]
@@ -287,7 +292,12 @@ class WifePlugin(Star):
         img = cfg[tid][0]
         name = os.path.splitext(img)[0]
         owner = cfg[tid][2]
-        text = f'{owner}的老婆是{name}~'
+        # 新增：解析出处和角色名，分隔符为#
+        if '#' in name:
+            source, chara = name.split('#', 1)
+            text = f'{owner}的老婆是来自《{source}》的{chara}'
+        else:
+            text = f'{owner}的老婆是{name}'
         path = os.path.join(IMG_DIR, img)
         chain = [Plain(text), Image.fromFileSystem(path) if os.path.exists(path) else Image.fromURL(self.image_base_url + img)]
         try:
