@@ -456,7 +456,11 @@ class WifePlugin(Star):
         del grp[uid]
         save_swap_requests()
 
+        # 检查并取消相关交换请求
+        cancel_msg = await self.cancel_swap_on_wife_change(gid, [uid, tid])
         yield event.plain_result('交换成功！')
+        if cancel_msg:
+            yield event.plain_result(cancel_msg)
 
     async def reject_swap_wife(self, event: AstrMessageEvent):
         # 拒绝交换老婆
