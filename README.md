@@ -29,6 +29,8 @@ v1.5.5完善交换老婆逻辑，牛老婆成功后立刻显示。
 
 v1.5.6老婆信息显示出处，需要更新图包。
 
+v1.5.7现在交换老婆成功也会清理其它交换请求。
+
 ## 相关
 - [astrbot_plugin_AW](https://github.com/zgojin/astrbot_plugin_AW)
 - [Astrbot](https://astrbot.app/)
