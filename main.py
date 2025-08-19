@@ -109,7 +109,7 @@ load_change_records()
 load_swap_requests()
 load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.6", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.7", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
