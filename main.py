@@ -109,7 +109,7 @@ load_change_records()
 load_swap_requests()
 load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.7", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.8", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -207,7 +207,7 @@ class WifePlugin(Star):
                             text = await resp.text()
                             img = random.choice(text.splitlines())
                 except:
-                    yield event.plain_result('获取图片失败')
+                    yield event.plain_result('抱歉，今天的老婆获取失败了，请稍后再试~')
                     return
             cfg[uid] = [img, today, nick]
             write_group_config(gid, uid, img, today, nick, cfg)
@@ -218,9 +218,9 @@ class WifePlugin(Star):
         name = os.path.splitext(img)[0]
         if '#' in name:
             source, chara = name.split('#', 1)
-            text = f'{nick}，你今天的老婆是来自《{source}》的{chara}'
+            text = f'{nick}，你今天的老婆是来自《{source}》的{chara}，请好好珍惜哦~'
         else:
-            text = f'{nick}，你今天的老婆是{name}'
+            text = f'{nick}，你今天的老婆是{name}，请好好珍惜哦~'
         path = os.path.join(IMG_DIR, img)
         if os.path.exists(path):
             chain = [Plain(text), Image.fromFileSystem(path)]
@@ -235,7 +235,7 @@ class WifePlugin(Star):
         # 牛老婆主逻辑
         gid = str(event.message_obj.group_id)
         if not ntr_statuses.get(gid, True):
-            yield event.plain_result('牛老婆功能未开启！')
+            yield event.plain_result('牛老婆功能还没开启哦，请联系管理员开启~')
             return
         uid = str(event.get_sender_id())
         nick = event.get_sender_name()
@@ -246,18 +246,18 @@ class WifePlugin(Star):
         if rec['date'] != today:
             rec = {'date': today, 'count': 0}
         if rec['count'] >= self.ntr_max:
-            yield event.plain_result(f'{nick}，每日最多{self.ntr_max}次，明天再来~')
+            yield event.plain_result(f'{nick}，你今天已经牛了{self.ntr_max}次啦，明天再来吧~')
             return
 
         tid = self.parse_target(event)
         if not tid or tid == uid:
-            msg = '请指定目标' if not tid else '不能牛自己'
+            msg = '请@你想牛的对象哦~' if not tid else '不能牛自己呀，换个人试试吧~'
             yield event.plain_result(f'{nick}，{msg}')
             return
 
         cfg = load_group_config(gid)
         if tid not in cfg or cfg[tid][1] != today:
-            yield event.plain_result('对方没有可牛的老婆')
+            yield event.plain_result('对方今天还没有老婆可牛哦~')
             return
 
         rec['count'] += 1
@@ -270,7 +270,7 @@ class WifePlugin(Star):
             write_group_config(gid, uid, wife, today, nick, cfg)
             # 检查并取消相关交换请求
             cancel_msg = await self.cancel_swap_on_wife_change(gid, [uid, tid])
-            yield event.plain_result(f'{nick}，牛老婆成功！')
+            yield event.plain_result(f'{nick}，牛老婆成功！老婆已归你所有，恭喜恭喜~')
             if cancel_msg:
                 yield event.plain_result(cancel_msg)
             # 立即为新老婆抽取并展示
@@ -278,7 +278,7 @@ class WifePlugin(Star):
                 yield res
         else:
             rem = self.ntr_max - rec['count']
-            yield event.plain_result(f'{nick}，失败！剩余次数{rem}')
+            yield event.plain_result(f'{nick}，很遗憾，牛失败了！你今天还可以再试{rem}次~')
 
     async def search_wife(self, event: AstrMessageEvent):
         # 查老婆主逻辑
@@ -287,7 +287,7 @@ class WifePlugin(Star):
         today = get_today()
         cfg = load_group_config(gid)
         if tid not in cfg or cfg[tid][1] != today:
-            yield event.plain_result('没有找到有效的老婆信息')
+            yield event.plain_result('没有发现老婆的踪迹，快去抽一个试试吧~')
             return
         img = cfg[tid][0]
         name = os.path.splitext(img)[0]
@@ -295,9 +295,9 @@ class WifePlugin(Star):
         # 新增：解析出处和角色名，分隔符为#
         if '#' in name:
             source, chara = name.split('#', 1)
-            text = f'{owner}的老婆是来自《{source}》的{chara}'
+            text = f'{owner}的老婆是来自《{source}》的{chara}，羡慕吗？'
         else:
-            text = f'{owner}的老婆是{name}'
+            text = f'{owner}的老婆是{name}，羡慕吗？'
         path = os.path.join(IMG_DIR, img)
         chain = [Plain(text), Image.fromFileSystem(path) if os.path.exists(path) else Image.fromURL(self.image_base_url + img)]
         try:
@@ -311,7 +311,7 @@ class WifePlugin(Star):
         uid = str(event.get_sender_id())
         nick = event.get_sender_name()
         if uid not in self.admins:
-            yield event.plain_result(f'{nick}，无权限')
+            yield event.plain_result(f'{nick}，你没有权限操作哦~')
             return
         ntr_statuses[gid] = not ntr_statuses.get(gid, False)
         save_ntr_statuses()
@@ -329,10 +329,10 @@ class WifePlugin(Star):
         recs = change_records.setdefault(gid, {})
         rec = recs.get(uid, {'date':'','count':0})
         if rec['date'] == today and rec['count'] >= self.change_max_per_day:
-            yield event.plain_result(f'{nick}，今天已经换过{self.change_max_per_day}次老婆啦！')
+            yield event.plain_result(f'{nick}，你今天已经换了{self.change_max_per_day}次老婆啦，明天再来吧~')
             return
         if uid not in cfg or cfg[uid][1] != today:
-            yield event.plain_result(f'{nick}，今天还没有老婆可以换哦！')
+            yield event.plain_result(f'{nick}，你今天还没有老婆，先去抽一个再来换吧~')
             return
         del cfg[uid]
         with open(os.path.join(CONFIG_DIR, f'{gid}.json'), 'w', encoding='utf-8') as f:
@@ -373,7 +373,7 @@ class WifePlugin(Star):
         if rec.get('date') != today:
             rec = {'date': today, 'count': 0}
         if rec['count'] >= self.reset_max_uses_per_day:
-            yield event.plain_result(f'{nick}，今天已使用过{self.reset_max_uses_per_day}次重置牛功能，明天再来~')
+            yield event.plain_result(f'{nick}，你今天已经用完{self.reset_max_uses_per_day}次重置机会啦，明天再来吧~')
             return
         rec['count'] += 1
         grp[uid] = rec
@@ -391,7 +391,7 @@ class WifePlugin(Star):
                 await event.bot.set_group_ban(group_id=int(gid), user_id=int(uid), duration=self.reset_mute_duration)
             except:
                 pass
-            yield event.plain_result(f'{nick}，重置牛失败，已被禁言{self.reset_mute_duration}秒。')
+            yield event.plain_result(f'{nick}，重置牛失败，被禁言{self.reset_mute_duration}秒，下次记得再接再厉哦~')
 
     async def swap_wife(self, event: AstrMessageEvent):
         # 发起交换老婆请求
@@ -406,18 +406,18 @@ class WifePlugin(Star):
         if rec_lim['date'] != today:
             rec_lim = {'date': today, 'count': 0}
         if rec_lim['count'] >= self.swap_max_per_day:
-            yield event.plain_result(f"{nick}，今天已发起{self.swap_max_per_day}次请求，明天再来~")
+            yield event.plain_result(f"{nick}，你今天已经发起了{self.swap_max_per_day}次交换请求啦，明天再来吧~")
             return
 
         if not tid or tid == uid:
-            yield event.plain_result(f'{nick}，请在命令后 @ 另一位用户。')
+            yield event.plain_result(f'{nick}，请在命令后@你想交换的对象哦~')
             return
 
         cfg = load_group_config(gid)
         for x in (uid, tid):
             if x not in cfg or cfg[x][1] != today:
                 who = nick if x == uid else '对方'
-                yield event.plain_result(f'{who}，今天还没有老婆，无法交换。')
+                yield event.plain_result(f'{who}，今天还没有老婆，无法进行交换哦~')
                 return
 
         rec_lim['count'] += 1
@@ -429,8 +429,8 @@ class WifePlugin(Star):
         save_swap_requests()
 
         yield event.chain_result([
-            Plain(f'{nick} 请求与 '), At(qq=int(tid)),
-            Plain(' 交换老婆，请对方用“同意交换 @发起者”或“拒绝交换 @发起者”。')
+            Plain(f'{nick} 想和 '), At(qq=int(tid)),
+            Plain(' 交换老婆啦！请对方用“同意交换 @发起者”或“拒绝交换 @发起者”来回应~')
         ])
 
     async def agree_swap_wife(self, event: AstrMessageEvent):
@@ -443,7 +443,7 @@ class WifePlugin(Star):
         grp = swap_requests.get(gid, {})
         rec = grp.get(uid)
         if not rec or rec.get('target') != tid:
-            yield event.plain_result(f'{nick}，请在命令后@发起者，或通过"查看交换请求"查看当前请求。')
+            yield event.plain_result(f'{nick}，请在命令后@发起者，或用“查看交换请求”命令查看当前请求哦~')
             return
 
         cfg = load_group_config(gid)
@@ -458,7 +458,7 @@ class WifePlugin(Star):
 
         # 检查并取消相关交换请求
         cancel_msg = await self.cancel_swap_on_wife_change(gid, [uid, tid])
-        yield event.plain_result('交换成功！')
+        yield event.plain_result('交换成功！你们的老婆已经互换啦，祝幸福~')
         if cancel_msg:
             yield event.plain_result(cancel_msg)
 
@@ -472,12 +472,12 @@ class WifePlugin(Star):
         grp = swap_requests.get(gid, {})
         rec = grp.get(uid)
         if not rec or rec.get('target') != tid:
-            yield event.plain_result(f'{nick}，请在命令后@发起者，或通过"查看交换请求"查看当前请求。')
+            yield event.plain_result(f'{nick}，请在命令后@发起者，或用“查看交换请求”命令查看当前请求哦~')
             return
 
         del grp[uid]
         save_swap_requests()
-        yield event.chain_result([At(qq=int(uid)), Plain('，对方拒绝了交换请求。')])
+        yield event.chain_result([At(qq=int(uid)), Plain('，对方婉拒了你的交换请求，下次加油吧~')])
 
     async def view_swap_requests(self, event: AstrMessageEvent):
         """
@@ -497,21 +497,21 @@ class WifePlugin(Star):
         received_from = [uid for uid, rec in grp.items() if rec.get('target') == me]
 
         if not sent_targets and not received_from:
-            yield event.plain_result('未找到交换请求')
+            yield event.plain_result('你当前没有任何交换请求哦~')
             return
 
         parts = []
         for tid in sent_targets:
             name = cfg.get(tid, [None, None, '未知用户'])[2]
-            parts.append(f'→ 我发起给 {name} 的请求')
+            parts.append(f'→ 你发起给 {name} 的交换请求')
         for uid in received_from:
             name = cfg.get(uid, [None, None, '未知用户'])[2]
-            parts.append(f'→ {name} 发起给我的请求')
+            parts.append(f'→ {name} 发起给你的交换请求')
 
         text = (
-            '当前交换请求：\n'
+            '当前交换请求如下：\n'
             + '\n'.join(parts)
-            + '\n请在“同意交换”或“拒绝交换”命令后 @ 发起者'
+            + '\n请在“同意交换”或“拒绝交换”命令后@发起者进行操作~'
         )
         yield event.plain_result(text)
 
@@ -541,5 +541,5 @@ class WifePlugin(Star):
             save_swap_limit_records()
         # 返回提示文本，由调用方 yield
         if to_cancel:
-            return '交换对象老婆已变更，取消交换请求并返还次数。'
+            return '检测到老婆变更，已自动取消相关交换请求并返还次数~'
         return None
