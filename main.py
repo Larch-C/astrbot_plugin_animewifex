@@ -109,7 +109,7 @@ load_change_records()
 load_swap_requests()
 load_swap_limit_records()
 
-@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.8", "https://github.com/monbed/astrbot_plugin_animewifex")
+@register("astrbot_plugin_animewifex", "monbed", "群二次元老婆插件修改版", "1.5.9", "https://github.com/monbed/astrbot_plugin_animewifex")
 class WifePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -214,10 +214,10 @@ class WifePlugin(Star):
         else:
             img = cfg[uid][0]
 
-        # 新增：解析出处和角色名，分隔符为#
+        # 新增：解析出处和角色名，分隔符为!
         name = os.path.splitext(img)[0]
-        if '#' in name:
-            source, chara = name.split('#', 1)
+        if '!' in name:
+            source, chara = name.split('!', 1)
             text = f'{nick}，你今天的老婆是来自《{source}》的{chara}，请好好珍惜哦~'
         else:
             text = f'{nick}，你今天的老婆是{name}，请好好珍惜哦~'
@@ -293,8 +293,8 @@ class WifePlugin(Star):
         name = os.path.splitext(img)[0]
         owner = cfg[tid][2]
         # 新增：解析出处和角色名，分隔符为#
-        if '#' in name:
-            source, chara = name.split('#', 1)
+        if '!' in name:
+            source, chara = name.split('!', 1)
             text = f'{owner}的老婆是来自《{source}》的{chara}，羡慕吗？'
         else:
             text = f'{owner}的老婆是{name}，羡慕吗？'

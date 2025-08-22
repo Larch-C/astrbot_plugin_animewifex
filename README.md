@@ -33,6 +33,9 @@ v1.5.7现在交换老婆成功也会清理其它交换请求。
 
 v1.5.8润色各种提示信息。
 
+v1.5.9使用!代替#拼接老婆出处与名称，解决图床访问问题，使用此版本请更新图包和图床。
+<span style="color:red;"><b>使用此版本请更新图包和图床</b></span>
+
 ## 相关
 - [astrbot_plugin_AW](https://github.com/zgojin/astrbot_plugin_AW)
 - [Astrbot](https://astrbot.app/)
